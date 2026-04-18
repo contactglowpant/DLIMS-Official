@@ -222,16 +222,24 @@ window.addEventListener('hashchange', () => {
 const firebaseConfig = {
     apiKey: "AIzaSyA_XFRt4zY6pl4cg5_XvP6LCrk9D34NHMU",
     authDomain: "passport-web-ca6b0.firebaseapp.com",
-    databaseURL: "https://passport-web-ca6b0-default-rtdb.firebaseio.com/", // Constructed from project ID
+    databaseURL: "https://passport-web-ca6b0-default-rtdb.firebaseio.com",
     projectId: "passport-web-ca6b0",
     storageBucket: "passport-web-ca6b0.firebasestorage.app",
     messagingSenderId: "298777292683",
-    appId: "1:298777292683:web:393feab13fc1a3cb7e898e"
+    appId: "1:298777292683:web:393feab13fc1a3cb7e898e",
+    measurementId: "G-5MBRQNZBNN"
 };
 
 // Initialize Firebase
 if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
+    // Initialize Analytics if available (requires firebase-analytics-compat.js script)
+    try {
+        if (typeof firebase.analytics === 'function') {
+            firebase.analytics();
+            console.log("Firebase Analytics initialized.");
+        }
+    } catch (e) { console.warn("Analytics not loaded:", e); }
 } else {
     console.error("Firebase SDK not loaded. Please check your internet connection.");
 }
