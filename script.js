@@ -334,7 +334,7 @@ function initDatabaseSync() {
     updateSyncStatus('connecting');
 
     // Monitor connection state
-    const connectedRef = db.root.child(".info/connected");
+    const connectedRef = db.ref(".info/connected");
     connectedRef.on("value", (snap) => {
         if (snap.val() === true) {
             console.log("Firebase Connected.");
