@@ -299,8 +299,44 @@ try {
 
 let pendingAutoSearch = new URLSearchParams(window.location.search).get('cnic');
 
+// --- CLOUD SYNC STATUS UI ---
+function updateSyncStatus(status, message = null) {
+    const syncElem = document.getElementById('syncStatus');
+    if (!syncElem) return;
+
+    const dot = syncElem.querySelector('.dot');
+    const text = syncElem.querySelector('.status-text');
+
+    syncElem.classList.remove('online', 'offline', 'connecting');
+    
+    if (status === 'online') {
+        syncElem.classList.add('online');
+        text.textContent = message || "Cloud Synced";
+    } else if (status === 'offline') {
+        syncElem.classList.add('offline');
+        text.textContent = message || "Offline (Local)";
+    } else {
+        syncElem.classList.add('connecting');
+        text.textContent = message || "Connecting...";
+    }
+}
+
 // Initialize data and setup Listener
 function initDatabaseSync() {
+    updateSyncStatus('connecting');
+
+    // Monitor connection state
+    const connectedRef = db.root.child(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            console.log("Firebase Connected.");
+            updateSyncStatus('online');
+        } else {
+            console.warn("Firebase Disconnected.");
+            updateSyncStatus('offline');
+        }
+    });
+
     recordsRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
@@ -310,6 +346,7 @@ function initDatabaseSync() {
                 ...data[key]
             }));
             console.log("Sync complete: Cloud data loaded.");
+            updateSyncStatus('online');
             renderRecords(); // Refresh dashboard
             
             // Re-run verify if a search was active to update with cloud data
@@ -318,6 +355,10 @@ function initDatabaseSync() {
                 performVerify(searchInput.value, true);
             }
         }
+    }, (error) => {
+        console.error("Cloud Sync Permission Error:", error);
+        updateSyncStatus('offline', "Sync Failed (Rules?)");
+        alert("CRITICAL: Cloud Sync Failed. Please check your Firebase Database Rules. Your changes will only be saved to this computer.");
     });
 }
 
@@ -326,19 +367,23 @@ if (recordsRef) {
     initDatabaseSync();
 } else {
     console.warn("Database not available - running in offline mode.");
+    updateSyncStatus('offline', "Config Missing");
 }
 
 function saveRecords() {
     // 1. Sync to Cloud if available
     if (recordsRef) {
+        updateSyncStatus('connecting', "Saving...");
         recordsRef.set(records.map(r => {
             const { firebaseKey, ...cleanRecord } = r;
             return cleanRecord;
         })).then(() => {
             console.log("Success: Cloud Sync Complete.");
+            updateSyncStatus('online');
         }).catch(err => {
             console.error("Cloud Sync Error:", err);
-            // Don't alert here to avoid annoying the user if they are just testing locally
+            updateSyncStatus('offline', "Save Failed");
+            alert("CLOUDSYNC ERROR: Your data was saved to this computer but COULD NOT reach the cloud. Check your Firebase Rules if this persists.");
         });
     }
 
